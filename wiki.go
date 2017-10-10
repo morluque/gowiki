@@ -3,6 +3,7 @@ package main
 import (
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 )
@@ -86,6 +87,13 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 	}
 }
 
+func accessLog(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	staticfs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static", staticfs))
@@ -93,5 +101,5 @@ func main() {
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
 	http.HandleFunc("/", rootRedirHandler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", accessLog(http.DefaultServeMux))
 }
